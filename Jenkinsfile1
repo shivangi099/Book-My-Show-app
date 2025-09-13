@@ -1,11 +1,12 @@
+
 pipeline {
     agent any
     tools {
         jdk 'jdk17'
-        nodejs 'node23'  // Changed from node24 to node18
+        nodejs 'node23'  // Or node18 if you installed locally
     }
     environment {
-        SCANNER_HOME = tool 'sonar-scanner'
+        // SCANNER_HOME = tool 'sonar-scanner'   // Not needed locally
     }
     stages {
         stage('Clean Workspace') {
@@ -21,24 +22,9 @@ pipeline {
             }
         }
 
-        stage('SonarQube Analysis') {
-            steps {
-                withSonarQubeEnv('sonar-server') {
-                    sh ''' 
-                    $SCANNER_HOME/bin/sonar-scanner -Dsonar.projectName=BMS \
-                    -Dsonar.projectKey=BMS 
-                    '''
-                }
-            }
-        }
-
-        stage('Quality Gate') {
-            steps {
-                script {
-                    waitForQualityGate abortPipeline: false, credentialsId: 'Sonar-token'
-                }
-            }
-        }
+        // ===== Remove SonarQube stages for local =====
+        // stage('SonarQube Analysis') { ... }
+        // stage('Quality Gate') { ... }
 
         stage('Install Dependencies') {
             steps {
@@ -65,6 +51,7 @@ pipeline {
         stage('Docker Build & Push') {
             steps {
                 script {
+                    // You can still push to DockerHub from local
                     withDockerRegistry(credentialsId: 'docker', toolName: 'docker') {
                         sh ''' 
                         echo "Building Docker image..."
