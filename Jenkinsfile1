@@ -2,7 +2,7 @@ pipeline {
     agent any
     tools {
         jdk 'jdk17'
-        nodejs 'node24'
+        nodejs 'node23'  // Changed from node24 to node18
     }
     environment {
         SCANNER_HOME = tool 'sonar-scanner'
@@ -13,12 +13,14 @@ pipeline {
                 cleanWs()
             }
         }
+
         stage('Checkout from Git') {
             steps {
                 git branch: 'feature/BMS-jenkins', url: 'https://github.com/shivangi099/Book-My-Show-app.git'
                 sh 'ls -la'  // Verify files after checkout
             }
         }
+
         stage('SonarQube Analysis') {
             steps {
                 withSonarQubeEnv('sonar-server') {
@@ -29,6 +31,7 @@ pipeline {
                 }
             }
         }
+
         stage('Quality Gate') {
             steps {
                 script {
@@ -36,32 +39,42 @@ pipeline {
                 }
             }
         }
+
         stage('Install Dependencies') {
             steps {
-                sh '''
-                cd bookmyshow-app
-                ls -la  # Verify package.json exists
-                if [ -f package.json ]; then
-                    rm -rf node_modules package-lock.json  # Remove old dependencies
-                    npm install  # Install fresh dependencies
-                else
-                    echo "Error: package.json not found in bookmyshow-app!"
-                    exit 1
-                fi
-                '''
+                script {
+                    try {
+                        sh '''
+                        cd bookmyshow-app
+                        if [ -f package.json ]; then
+                            [ -d node_modules ] && rm -rf node_modules
+                            npm install --legacy-peer-deps
+                        else
+                            echo "Error: package.json not found!"
+                            exit 1
+                        fi
+                        '''
+                    } catch (err) {
+                        echo "npm install failed: ${err}"
+                        currentBuild.result = 'UNSTABLE'
+                    }
+                }
             }
         }
+
         stage('OWASP FS Scan') {
             steps {
                 dependencyCheck additionalArguments: '--scan ./ --disableYarnAudit --disableNodeAudit', odcInstallation: 'DP-Check'
                 dependencyCheckPublisher pattern: '**/dependency-check-report.xml'
             }
         }
+
         stage('Trivy FS Scan') {
             steps {
                 sh 'trivy fs . > trivyfs.txt'
             }
         }
+
         stage('Docker Build & Push') {
             steps {
                 script {
@@ -77,6 +90,7 @@ pipeline {
                 }
             }
         }
+
         stage('Deploy to Container') {
             steps {
                 sh ''' 
@@ -91,12 +105,13 @@ pipeline {
                 docker ps -a
 
                 echo "Fetching logs..."
-                sleep 5  # Give time for the app to start
+                sleep 5
                 docker logs bms
                 '''
             }
         }
     }
+
     post {
         always {
             emailext attachLog: true,
@@ -109,3 +124,4 @@ pipeline {
         }
     }
 }
+
