@@ -2,6 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: bms-app
+  namespace: shivangi
   labels:
     app: bms
 spec:
@@ -15,7 +16,8 @@ spec:
         app: bms
     spec:
       containers:
-      - name: bms
-        image: 81392756/bms:latest  
-        ports:
-        - containerPort: 3000  
+        - name: bms
+          image: 81392756/bms:latest
+          ports:
+            - containerPort: 3000
+
