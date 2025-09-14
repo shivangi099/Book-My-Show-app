@@ -1,9 +1,8 @@
-
 pipeline {
     agent any
     tools {
         jdk 'jdk17'
-        nodejs 'node23'  // Changed from node24 to node18
+        nodejs 'node23'  
     }
     environment {
         SCANNER_HOME = tool 'sonar-scanner'
@@ -18,7 +17,7 @@ pipeline {
         stage('Checkout from Git') {
             steps {
                 git branch: 'feature/BMS-jenkins', url: 'https://github.com/shivangi099/Book-My-Show-app.git'
-                sh 'ls -la'  // Verify files after checkout
+                sh 'ls -la'  
             }
         }
 
@@ -62,44 +61,29 @@ pipeline {
                 }
             }
         }
-
         stage('Docker Build & Push') {
             steps {
                 script {
                     withDockerRegistry(credentialsId: 'docker', toolName: 'docker') {
-                        sh ''' 
-                        echo "Building Docker image..."
-                        docker build --no-cache -t 81392756/bms:latest -f bookmyshow-app/Dockerfile bookmyshow-app
-
-                        echo "Pushing Docker image to registry..."
-                        docker push 81392756/bms:latest
+                        sh '''
+                            docker build -t bms:latest bookmyshow-app
+                            docker tag bms:latest 81392756/bms:latest
+                            echo "Pushing Docker image to registry..."
+                            docker push 81392756/bms:latest
                         '''
                     }
                 }
             }
         }
-
         stage('Deploy to Container') {
             steps {
-                sh ''' 
-                echo "Stopping and removing old container..."
-                docker stop bms || true
-                docker rm bms || true
-
-                echo "Running new container on port 3000..."
-                docker run -d --restart=always --name bms -p 3000:3000 81392756/bms:latest
-
-                echo "Checking running containers..."
-                docker ps -a
-
-                echo "Fetching logs..."
-                sleep 5
-                docker logs bms
+                sh '''
+                    docker rm -f bms || true
+                    docker run -d --name bms -p 3000:3000 81392756/bms:latest
                 '''
             }
         }
     }
-
     post {
         always {
             emailext attachLog: true,
