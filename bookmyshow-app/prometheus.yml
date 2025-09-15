@@ -10,7 +10,12 @@ scrape_configs:
     static_configs:
       - targets: ["node-exporter:9100"]  
 
-  - job_name: "bms-app"
+  - job_name: "jenkins"
+    metrics_path: /prometheus
+    basic_auth:
+      username: "admin"
+      password: "1117914924738f7781ff7b5524b4ce64ce"
     static_configs:
-      - targets: ["bms-service:3000"]  
+      - targets: ["3.149.3.12:8080"]
+  
 
